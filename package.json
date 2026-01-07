@@ -1,0 +1,27 @@
+{
+  "name": "famoney",
+  "version": "0.0.1",
+  "private": true,
+  "description": "공동 지출 원장 웹 애플리케이션",
+  "scripts": {
+    "dev": "pnpm --filter @famoney/frontend dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "generate:api": "pnpm --filter @famoney/api-client generate",
+    "clean": "pnpm -r clean && rm -rf node_modules"
+  },
+  "keywords": [
+    "expense",
+    "ledger",
+    "collaborative",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

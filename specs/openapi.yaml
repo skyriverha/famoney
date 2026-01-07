@@ -1,0 +1,1182 @@
+openapi: 3.0.3
+info:
+  title: FaMoney API
+  description: 공동 지출 원장 웹 애플리케이션 API
+  version: 1.0.0
+  contact:
+    name: FaMoney Team
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.famoney.app
+    description: Production server
+
+tags:
+  - name: Auth
+    description: 인증/인가
+  - name: Users
+    description: 사용자 관리
+  - name: Ledgers
+    description: 원장 관리
+  - name: Members
+    description: 멤버 관리
+  - name: Expenses
+    description: 지출 기록 관리
+
+paths:
+  # ============================================
+  # Authentication
+  # ============================================
+  /api/v1/auth/signup:
+    post:
+      tags: [Auth]
+      summary: 회원가입
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: 회원가입 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: 이미 존재하는 이메일
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: 로그인
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 토큰 갱신
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: 토큰 갱신 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: 로그아웃
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 로그아웃 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Users
+  # ============================================
+  /api/v1/users/me:
+    get:
+      tags: [Users]
+      summary: 내 정보 조회
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Users]
+      summary: 내 정보 수정
+      operationId: updateMyProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags: [Users]
+      summary: 계정 삭제
+      operationId: deleteMyAccount
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: 삭제 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Ledgers
+  # ============================================
+  /api/v1/ledgers:
+    post:
+      tags: [Ledgers]
+      summary: 원장 생성
+      operationId: createLedger
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLedgerRequest'
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags: [Ledgers]
+      summary: 내 원장 목록 조회
+      operationId: getMyLedgers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ledgers/{ledgerId}:
+    get:
+      tags: [Ledgers]
+      summary: 원장 상세 조회
+      operationId: getLedger
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Ledgers]
+      summary: 원장 수정
+      operationId: updateLedger
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLedgerRequest'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Ledgers]
+      summary: 원장 삭제
+      operationId: deleteLedger
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      responses:
+        '204':
+          description: 삭제 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================
+  # Members
+  # ============================================
+  /api/v1/ledgers/{ledgerId}/members:
+    get:
+      tags: [Members]
+      summary: 멤버 목록 조회
+      operationId: getLedgerMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/ledgers/{ledgerId}/members/invite:
+    post:
+      tags: [Members]
+      summary: 멤버 초대
+      operationId: inviteMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteMemberRequest'
+      responses:
+        '201':
+          description: 초대 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/ledgers/{ledgerId}/members/{memberId}:
+    patch:
+      tags: [Members]
+      summary: 멤버 역할 변경
+      operationId: updateMemberRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+        - $ref: '#/components/parameters/MemberIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRoleRequest'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Members]
+      summary: 멤버 제거
+      operationId: removeMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+        - $ref: '#/components/parameters/MemberIdParam'
+      responses:
+        '204':
+          description: 제거 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/invitations/{code}/accept:
+    post:
+      tags: [Members]
+      summary: 초대 수락
+      operationId: acceptInvitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 초대 코드
+      responses:
+        '200':
+          description: 초대 수락 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponse'
+        '400':
+          description: 만료되거나 잘못된 초대 코드
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================
+  # Expenses
+  # ============================================
+  /api/v1/ledgers/{ledgerId}/expenses:
+    post:
+      tags: [Expenses]
+      summary: 지출 기록 생성
+      operationId: createExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseRequest'
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    get:
+      tags: [Expenses]
+      summary: 지출 기록 목록 조회
+      operationId: getExpenses
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 조회 시작일
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 조회 종료일
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: 카테고리 필터
+        - name: createdBy
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: 작성자 필터
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/ledgers/{ledgerId}/expenses/{expenseId}:
+    get:
+      tags: [Expenses]
+      summary: 지출 기록 상세 조회
+      operationId: getExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+        - $ref: '#/components/parameters/ExpenseIdParam'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Expenses]
+      summary: 지출 기록 수정
+      operationId: updateExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+        - $ref: '#/components/parameters/ExpenseIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpenseRequest'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Expenses]
+      summary: 지출 기록 삭제
+      operationId: deleteExpense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+        - $ref: '#/components/parameters/ExpenseIdParam'
+      responses:
+        '204':
+          description: 삭제 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================
+  # Categories
+  # ============================================
+  /api/v1/ledgers/{ledgerId}/categories:
+    get:
+      tags: [Expenses]
+      summary: 카테고리 목록 조회
+      operationId: getCategories
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Expenses]
+      summary: 커스텀 카테고리 생성
+      operationId: createCategory
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/LedgerIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  # ============================================
+  # Security Schemes
+  # ============================================
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ============================================
+  # Parameters
+  # ============================================
+  parameters:
+    LedgerIdParam:
+      name: ledgerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 원장 ID
+
+    MemberIdParam:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 멤버 ID
+
+    ExpenseIdParam:
+      name: expenseId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 지출 ID
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+      description: 페이지 번호 (0부터 시작)
+
+    SizeParam:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      description: 페이지 크기
+
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+        default: expenseDate,desc
+      description: "정렬 (예: expenseDate,desc)"
+
+  # ============================================
+  # Responses
+  # ============================================
+  responses:
+    BadRequest:
+      description: 잘못된 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: 인증 실패
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: 권한 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: 리소스를 찾을 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================
+  # Schemas
+  # ============================================
+  schemas:
+    # ------------------------------------------
+    # Common
+    # ------------------------------------------
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    PageInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+
+    # ------------------------------------------
+    # Auth
+    # ------------------------------------------
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: 액세스 토큰 만료 시간 (초)
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    # ------------------------------------------
+    # User
+    # ------------------------------------------
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        profileImage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        profileImage:
+          type: string
+          nullable: true
+
+    # ------------------------------------------
+    # Ledger
+    # ------------------------------------------
+    CreateLedgerRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        currency:
+          type: string
+          default: KRW
+          enum: [KRW, USD, JPY, EUR]
+
+    UpdateLedgerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+
+    LedgerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        currency:
+          type: string
+        memberCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+
+    LedgerDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/LedgerResponse'
+        - type: object
+          properties:
+            myRole:
+              $ref: '#/components/schemas/MemberRole'
+            totalExpenseAmount:
+              type: number
+              format: double
+            recentExpenses:
+              type: array
+              items:
+                $ref: '#/components/schemas/ExpenseSummary'
+
+    LedgerListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/LedgerResponse'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+
+    # ------------------------------------------
+    # Member
+    # ------------------------------------------
+    MemberRole:
+      type: string
+      enum: [OWNER, ADMIN, MEMBER, VIEWER]
+
+    InviteMemberRequest:
+      type: object
+      required:
+        - email
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/MemberRole'
+
+    UpdateMemberRoleRequest:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          $ref: '#/components/schemas/MemberRole'
+
+    MemberResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        role:
+          $ref: '#/components/schemas/MemberRole'
+        joinedAt:
+          type: string
+          format: date-time
+
+    MemberListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberResponse'
+
+    InvitationResponse:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+        inviteUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        profileImage:
+          type: string
+          nullable: true
+
+    # ------------------------------------------
+    # Expense
+    # ------------------------------------------
+    CreateExpenseRequest:
+      type: object
+      required:
+        - amount
+        - description
+        - expenseDate
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          maxLength: 50
+        expenseDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 50
+
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          maxLength: 50
+        expenseDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 50
+
+    ExpenseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        expenseDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          nullable: true
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ExpenseSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        expenseDate:
+          type: string
+          format: date
+
+    ExpenseListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseResponse'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+        summary:
+          $ref: '#/components/schemas/ExpenseListSummary'
+
+    ExpenseListSummary:
+      type: object
+      properties:
+        totalAmount:
+          type: number
+          format: double
+        count:
+          type: integer
+
+    # ------------------------------------------
+    # Category
+    # ------------------------------------------
+    CategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+          description: HEX 색상 코드 (예: #FF5733)
+        isDefault:
+          type: boolean
+
+    CategoryListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryResponse'
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
