@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ThemeRegistry from "@/lib/ThemeRegistry";
+import { ToastProvider } from "@/components/common/Toast";
 
 export const metadata: Metadata = {
   title: "FaMoney - 가족과 함께하는 투명한 가계부",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="ko">
       <body className="antialiased">
         <ThemeRegistry>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </ThemeRegistry>
       </body>
     </html>

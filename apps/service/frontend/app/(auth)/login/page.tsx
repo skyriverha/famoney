@@ -17,14 +17,16 @@ import {
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import TopAppBar from '@/components/layout/TopAppBar';
+import Logo from '@/components/common/Logo';
 import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/components/common/Toast';
 import type { User } from '@/types';
 
 export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
+  const { showComingSoon } = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,20 +72,7 @@ export default function LoginPage() {
       <Container maxWidth="sm" sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 4 }}>
         {/* Logo */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-          <Box
-            sx={{
-              width: 80,
-              height: 80,
-              borderRadius: 4,
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 3,
-            }}
-          >
-            <CalculateIcon sx={{ fontSize: 48, color: 'white' }} />
-          </Box>
+          <Logo size="large" />
         </Box>
 
         <Typography variant="h4" align="center" sx={{ fontWeight: 700, mb: 4 }}>
@@ -171,7 +160,7 @@ export default function LoginPage() {
               component="button"
               type="button"
               variant="body2"
-              onClick={() => alert('비밀번호 재설정 기능은 준비 중입니다')}
+              onClick={() => showComingSoon('비밀번호 재설정')}
               sx={{ color: 'text.secondary', textDecoration: 'none' }}
             >
               비밀번호를 잊으셨나요?

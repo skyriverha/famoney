@@ -22,11 +22,13 @@ import PeopleIcon from '@mui/icons-material/People';
 import TopAppBar from '@/components/layout/TopAppBar';
 import SideDrawer from '@/components/layout/SideDrawer';
 import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/components/common/Toast';
 import type { Ledger } from '@/types';
 
 export default function LedgersPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const { showComingSoon } = useToast();
   const [showDrawer, setShowDrawer] = useState(false);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
 
@@ -119,7 +121,7 @@ export default function LedgersPage() {
             variant="contained"
             size="small"
             startIcon={<AddIcon />}
-            onClick={() => alert('원장 생성 기능은 준비 중입니다')}
+            onClick={() => showComingSoon('원장 생성')}
           >
             새 원장
           </Button>
@@ -153,7 +155,7 @@ export default function LedgersPage() {
               variant="contained"
               size="large"
               startIcon={<AddIcon />}
-              onClick={() => alert('원장 생성 기능은 준비 중입니다')}
+              onClick={() => showComingSoon('원장 생성')}
             >
               원장 만들기
             </Button>
@@ -172,7 +174,7 @@ export default function LedgersPage() {
                     boxShadow: 4,
                   },
                 }}
-                onClick={() => alert('원장 상세 페이지는 준비 중입니다')}
+                onClick={() => showComingSoon('원장 상세')}
               >
                 <CardContent sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -244,7 +246,7 @@ export default function LedgersPage() {
           bottom: 80,
           right: 16,
         }}
-        onClick={() => alert('원장 생성 기능은 준비 중입니다')}
+        onClick={() => showComingSoon('원장 생성')}
       >
         <AddIcon />
       </Fab>
