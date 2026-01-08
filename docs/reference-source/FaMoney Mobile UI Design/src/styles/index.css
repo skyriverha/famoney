@@ -1,0 +1,29 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Mobile optimizations */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area insets for mobile */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Touch action optimization */
+button,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
