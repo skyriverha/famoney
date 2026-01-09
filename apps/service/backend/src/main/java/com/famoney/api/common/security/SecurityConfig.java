@@ -1,7 +1,11 @@
 package com.famoney.api.common.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -10,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -18,13 +23,15 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Basic Security Configuration for Phase 1.
- * This configuration allows all requests for initial setup and testing.
- * JWT authentication will be added in Phase 2.
+ * Security Configuration with JWT authentication.
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -39,23 +46,38 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Authorization rules - Phase 1: Allow all for setup
+                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // Public endpoints - no authentication required
+                        .requestMatchers("/api/v1/auth/signup").permitAll()
+                        .requestMatchers("/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/auth/refresh").permitAll()
+
+                        // Documentation and monitoring
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        // For Phase 1: Allow all other requests (will be secured in Phase 2)
-                        .anyRequest().permitAll()
+
+                        // All other requests require authentication
+                        .anyRequest().authenticated()
                 )
+
+                // Add JWT filter before UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Allow H2 console frames
                 .headers(headers ->
                         headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
 
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authenticationConfiguration
+    ) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
