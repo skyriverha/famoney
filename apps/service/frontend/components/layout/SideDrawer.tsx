@@ -43,7 +43,7 @@ export default function SideDrawer({ open, onClose }: SideDrawerProps) {
       {/* User Profile Section */}
       <Box sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
         <Avatar
-          src={user?.avatar}
+          src={user?.profileImage ?? undefined}
           sx={{ width: 64, height: 64, mb: 2 }}
         >
           {user?.name?.charAt(0)}

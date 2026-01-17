@@ -14,6 +14,8 @@ import {
   InputAdornment,
   Divider,
   Link as MuiLink,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -21,11 +23,10 @@ import TopAppBar from '@/components/layout/TopAppBar';
 import Logo from '@/components/common/Logo';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/common/Toast';
-import type { User } from '@/types';
 
 export default function LoginPage() {
   const router = useRouter();
-  const setUser = useAuthStore((state) => state.setUser);
+  const { login, isLoading, error, clearError } = useAuthStore();
   const { showComingSoon } = useToast();
 
   const [email, setEmail] = useState('');
@@ -34,8 +35,9 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
 
     const newErrors: Record<string, string> = {};
 
@@ -52,16 +54,12 @@ export default function LoginPage() {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      // Mock login - 실제로는 API 호출
-      const mockUser: User = {
-        id: '1',
-        name: email.split('@')[0],
-        email: email,
-        avatar: undefined,
-      };
-
-      setUser(mockUser, 'mock-token-' + Date.now());
-      router.push('/ledgers');
+      try {
+        await login(email, password);
+        router.push('/ledgers');
+      } catch {
+        // Error is handled by the store
+      }
     }
   };
 
@@ -79,6 +77,13 @@ export default function LoginPage() {
           로그인
         </Typography>
 
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
+            {error}
+          </Alert>
+        )}
+
         <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
           {/* Email */}
           <Box sx={{ mb: 3 }}>
@@ -91,6 +96,7 @@ export default function LoginPage() {
               error={!!errors.email}
               helperText={errors.email}
               autoComplete="email"
+              disabled={isLoading}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   height: 48,
@@ -110,6 +116,7 @@ export default function LoginPage() {
               error={!!errors.password}
               helperText={errors.password}
               autoComplete="current-password"
+              disabled={isLoading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -137,6 +144,7 @@ export default function LoginPage() {
                 <Checkbox
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={isLoading}
                 />
               }
               label="자동 로그인"
@@ -149,9 +157,10 @@ export default function LoginPage() {
             variant="contained"
             fullWidth
             size="large"
+            disabled={isLoading}
             sx={{ mb: 2, height: 56, fontSize: '1.125rem' }}
           >
-            로그인
+            {isLoading ? <CircularProgress size={24} color="inherit" /> : '로그인'}
           </Button>
 
           {/* Forgot Password */}
@@ -193,4 +202,3 @@ export default function LoginPage() {
     </Box>
   );
 }
-

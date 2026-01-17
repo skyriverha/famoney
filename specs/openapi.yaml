@@ -1156,7 +1156,7 @@ components:
           type: string
         color:
           type: string
-          description: HEX 색상 코드 (예: #FF5733)
+          description: "HEX 색상 코드 (예: #FF5733)"
         isDefault:
           type: boolean
 

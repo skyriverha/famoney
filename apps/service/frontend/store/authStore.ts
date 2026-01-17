@@ -1,34 +1,168 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@/types';
+import { createAuthApi, ApiError } from '@/lib/api';
+import type { AuthResponse, UserResponse } from '@/lib/api';
 
 interface AuthState {
-  user: User | null;
-  token: string | null;
-  setUser: (user: User, token?: string) => void;
-  logout: () => void;
+  user: UserResponse | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  expiresAt: number | null;
+  isLoading: boolean;
+  error: string | null;
+
+  // Actions
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
+  clearError: () => void;
+
+  // Getters
   isAuthenticated: () => boolean;
+  isTokenExpired: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      token: null,
-      setUser: (user: User, token?: string) => {
-        set({ user, token: token || null });
+      accessToken: null,
+      refreshToken: null,
+      expiresAt: null,
+      isLoading: false,
+      error: null,
+
+      login: async (email: string, password: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const authApi = createAuthApi();
+          const response = await authApi.login({ email, password });
+          setAuthState(set, response);
+        } catch (error) {
+          const message = getErrorMessage(error);
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
       },
-      logout: () => {
-        set({ user: null, token: null });
+
+      signup: async (email: string, password: string, name: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const authApi = createAuthApi();
+          const response = await authApi.signup({ email, password, name });
+          setAuthState(set, response);
+        } catch (error) {
+          const message = getErrorMessage(error);
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
       },
+
+      logout: async () => {
+        const { accessToken } = get();
+        try {
+          if (accessToken) {
+            const authApi = createAuthApi(accessToken);
+            await authApi.logout();
+          }
+        } catch {
+          // Ignore logout errors - clear state anyway
+        } finally {
+          set({
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+            expiresAt: null,
+            isLoading: false,
+            error: null,
+          });
+        }
+      },
+
+      refreshAccessToken: async () => {
+        const { refreshToken } = get();
+        if (!refreshToken) return false;
+
+        try {
+          const authApi = createAuthApi();
+          const response = await authApi.refreshToken({ refreshToken });
+          setAuthState(set, response);
+          return true;
+        } catch {
+          // Refresh failed - clear auth state
+          set({
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+            expiresAt: null,
+          });
+          return false;
+        }
+      },
+
+      clearError: () => set({ error: null }),
+
       isAuthenticated: () => {
-        const { user } = get();
-        return user !== null;
+        const { user, accessToken } = get();
+        return user !== null && accessToken !== null;
+      },
+
+      isTokenExpired: () => {
+        const { expiresAt } = get();
+        if (!expiresAt) return true;
+        // Consider token expired 60 seconds before actual expiry
+        return Date.now() >= expiresAt - 60000;
       },
     }),
     {
       name: 'famoney-auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        expiresAt: state.expiresAt,
+      }),
     }
   )
 );
 
+/**
+ * Helper to set auth state from API response.
+ */
+function setAuthState(
+  set: (state: Partial<AuthState>) => void,
+  response: AuthResponse
+) {
+  const expiresAt = Date.now() + (response.expiresIn || 3600) * 1000;
+  set({
+    user: response.user,
+    accessToken: response.accessToken,
+    refreshToken: response.refreshToken,
+    expiresAt,
+    isLoading: false,
+    error: null,
+  });
+}
+
+/**
+ * Extract error message from API error.
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 401:
+        return '이메일 또는 비밀번호가 올바르지 않습니다.';
+      case 409:
+        return '이미 가입된 이메일입니다.';
+      case 400:
+        return '입력 정보를 확인해주세요.';
+      default:
+        return error.message || '서버 오류가 발생했습니다.';
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return '알 수 없는 오류가 발생했습니다.';
+}

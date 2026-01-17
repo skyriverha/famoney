@@ -13,6 +13,8 @@ import {
   Avatar,
   LinearProgress,
   Link as MuiLink,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -20,11 +22,10 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import TopAppBar from '@/components/layout/TopAppBar';
 import { useAuthStore } from '@/store/authStore';
-import type { User } from '@/types';
 
 export default function SignUpPage() {
   const router = useRouter();
-  const setUser = useAuthStore((state) => state.setUser);
+  const { signup, isLoading, error, clearError } = useAuthStore();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -85,19 +86,17 @@ export default function SignUpPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
 
     if (validateForm()) {
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name,
-        email: formData.email,
-        avatar: profileImage || undefined,
-      };
-
-      setUser(newUser, 'mock-token-' + Date.now());
-      router.push('/ledgers');
+      try {
+        await signup(formData.email, formData.password, formData.name);
+        router.push('/ledgers');
+      } catch {
+        // Error is handled by the store
+      }
     }
   };
 
@@ -119,6 +118,13 @@ export default function SignUpPage() {
       <TopAppBar title="회원가입" showBackButton onBackClick={() => router.push('/')} />
 
       <Container maxWidth="sm" sx={{ flex: 1, py: 4, overflow: 'auto' }}>
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
+            {error}
+          </Alert>
+        )}
+
         <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
           {/* Profile Image */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4 }}>
@@ -131,6 +137,7 @@ export default function SignUpPage() {
                   />
                   <IconButton
                     onClick={() => setProfileImage(null)}
+                    disabled={isLoading}
                     sx={{
                       position: 'absolute',
                       top: -8,
@@ -162,9 +169,9 @@ export default function SignUpPage() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer',
+                    cursor: isLoading ? 'default' : 'pointer',
                     '&:hover': {
-                      borderColor: 'primary.main',
+                      borderColor: isLoading ? 'grey.300' : 'primary.main',
                     },
                   }}
                 >
@@ -176,6 +183,7 @@ export default function SignUpPage() {
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
+                    disabled={isLoading}
                     hidden
                   />
                 </Box>
@@ -197,6 +205,7 @@ export default function SignUpPage() {
               error={!!errors.email}
               helperText={errors.email}
               placeholder="example@email.com"
+              disabled={isLoading}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   height: 48,
@@ -216,6 +225,7 @@ export default function SignUpPage() {
               error={!!errors.password}
               helperText={errors.password}
               placeholder="8자 이상 입력"
+              disabled={isLoading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -260,6 +270,7 @@ export default function SignUpPage() {
               error={!!errors.confirmPassword}
               helperText={errors.confirmPassword}
               placeholder="비밀번호를 다시 입력"
+              disabled={isLoading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -291,6 +302,7 @@ export default function SignUpPage() {
               error={!!errors.name}
               helperText={errors.name}
               placeholder="홍길동"
+              disabled={isLoading}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   height: 48,
@@ -305,9 +317,10 @@ export default function SignUpPage() {
             variant="contained"
             fullWidth
             size="large"
+            disabled={isLoading}
             sx={{ mb: 3, height: 56, fontSize: '1.125rem' }}
           >
-            가입하기
+            {isLoading ? <CircularProgress size={24} color="inherit" /> : '가입하기'}
           </Button>
 
           {/* Login Link */}
@@ -329,4 +342,3 @@ export default function SignUpPage() {
     </Box>
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -10,9 +10,10 @@ import {
   Card,
   CardContent,
   IconButton,
-  Avatar,
-  AvatarGroup,
   Fab,
+  CircularProgress,
+  Alert,
+  Chip,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -21,29 +22,63 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import PeopleIcon from '@mui/icons-material/People';
 import TopAppBar from '@/components/layout/TopAppBar';
 import SideDrawer from '@/components/layout/SideDrawer';
+import LedgerCreateDialog from '@/components/ledger/LedgerCreateDialog';
 import { useAuthStore } from '@/store/authStore';
-import { useToast } from '@/components/common/Toast';
-import type { Ledger } from '@/types';
+import { useLedgerStore } from '@/store/ledgerStore';
+import type { MemberRole } from '@/lib/api';
+
+const getRoleLabel = (role: MemberRole): string => {
+  const labels: Record<MemberRole, string> = {
+    OWNER: '소유자',
+    ADMIN: '관리자',
+    MEMBER: '멤버',
+    VIEWER: '뷰어',
+  };
+  return labels[role];
+};
+
+const getRoleColor = (role: MemberRole): 'primary' | 'secondary' | 'default' | 'info' => {
+  const colors: Record<MemberRole, 'primary' | 'secondary' | 'default' | 'info'> = {
+    OWNER: 'primary',
+    ADMIN: 'secondary',
+    MEMBER: 'default',
+    VIEWER: 'info',
+  };
+  return colors[role];
+};
 
 export default function LedgersPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const { showComingSoon } = useToast();
+  const { ledgers, isLoading, error, fetchLedgers, clearError } = useLedgerStore();
   const [showDrawer, setShowDrawer] = useState(false);
-  const [ledgers, setLedgers] = useState<Ledger[]>([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  const loadLedgers = useCallback(async () => {
+    try {
+      await fetchLedgers();
+    } catch {
+      // Error is handled in store
+    }
+  }, [fetchLedgers]);
 
   useEffect(() => {
     // 인증 확인
     if (!user) {
       router.push('/login');
+      return;
     }
-  }, [user, router]);
+    // 원장 목록 로드
+    loadLedgers();
+  }, [user, router, loadLedgers]);
+
+  const handleCreateSuccess = () => {
+    setShowCreateDialog(false);
+  };
 
   if (!user) {
     return null;
   }
-
-  const totalExpenses = ledgers.reduce((sum, ledger) => sum + ledger.monthlyTotal, 0);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
@@ -66,6 +101,13 @@ export default function LedgersPage() {
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
           안녕하세요, {user.name}님
         </Typography>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" onClose={clearError} sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         {/* Quick Stats */}
         <Box
@@ -92,10 +134,10 @@ export default function LedgersPage() {
           <Card sx={{ minWidth: 140, bgcolor: 'success.50', boxShadow: 'none' }}>
             <CardContent sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                이번 달 지출
+                내 소유
               </Typography>
               <Typography variant="h4" color="success.main" sx={{ fontWeight: 700 }}>
-                {totalExpenses.toLocaleString()}원
+                {ledgers.filter((l) => l.myRole === 'OWNER').length}
               </Typography>
             </CardContent>
           </Card>
@@ -103,10 +145,10 @@ export default function LedgersPage() {
           <Card sx={{ minWidth: 140, bgcolor: 'secondary.50', boxShadow: 'none' }}>
             <CardContent sx={{ p: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                최근 활동
+                공유 받음
               </Typography>
               <Typography variant="h4" color="secondary.main" sx={{ fontWeight: 700 }}>
-                {ledgers.filter((l) => l.expenses.length > 0).length}개
+                {ledgers.filter((l) => l.myRole !== 'OWNER').length}
               </Typography>
             </CardContent>
           </Card>
@@ -121,14 +163,21 @@ export default function LedgersPage() {
             variant="contained"
             size="small"
             startIcon={<AddIcon />}
-            onClick={() => showComingSoon('원장 생성')}
+            onClick={() => setShowCreateDialog(true)}
           >
             새 원장
           </Button>
         </Box>
 
+        {/* Loading State */}
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
         {/* Empty State */}
-        {ledgers.length === 0 ? (
+        {!isLoading && ledgers.length === 0 ? (
           <Card sx={{ borderRadius: 4, textAlign: 'center', py: 6 }}>
             <Box
               sx={{
@@ -155,12 +204,12 @@ export default function LedgersPage() {
               variant="contained"
               size="large"
               startIcon={<AddIcon />}
-              onClick={() => showComingSoon('원장 생성')}
+              onClick={() => setShowCreateDialog(true)}
             >
               원장 만들기
             </Button>
           </Card>
-        ) : (
+        ) : !isLoading && (
           /* Ledger List */
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {ledgers.map((ledger) => (
@@ -174,14 +223,22 @@ export default function LedgersPage() {
                     boxShadow: 4,
                   },
                 }}
-                onClick={() => showComingSoon('원장 상세')}
+                onClick={() => router.push(`/ledgers/${ledger.id}`)}
               >
                 <CardContent sx={{ p: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {ledger.name}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          {ledger.name}
+                        </Typography>
+                        <Chip
+                          label={getRoleLabel(ledger.myRole)}
+                          color={getRoleColor(ledger.myRole)}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
                       {ledger.description && (
                         <Typography
                           variant="body2"
@@ -201,34 +258,21 @@ export default function LedgersPage() {
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 32, height: 32, fontSize: '0.875rem' } }}>
-                        {ledger.members.slice(0, 3).map((member, idx) => (
-                          <Avatar key={idx} src={member.avatar}>
-                            {member.name.charAt(0)}
-                          </Avatar>
-                        ))}
-                      </AvatarGroup>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <PeopleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                         <Typography variant="body2" color="text.secondary">
-                          {ledger.memberCount}
+                          {ledger.memberCount}명
                         </Typography>
                       </Box>
-                    </Box>
-
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="h6" color="primary.main" sx={{ fontWeight: 700 }}>
-                        {ledger.monthlyTotal.toLocaleString()}원
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        이번 달
+                      <Typography variant="body2" color="text.secondary">
+                        · {ledger.currency}
                       </Typography>
                     </Box>
                   </Box>
 
                   <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="caption" color="text.secondary">
-                      마지막 업데이트: {new Date(ledger.lastUpdated).toLocaleDateString('ko-KR')}
+                      생성일: {new Date(ledger.createdAt).toLocaleDateString('ko-KR')}
                     </Typography>
                   </Box>
                 </CardContent>
@@ -246,13 +290,20 @@ export default function LedgersPage() {
           bottom: 80,
           right: 16,
         }}
-        onClick={() => showComingSoon('원장 생성')}
+        onClick={() => setShowCreateDialog(true)}
       >
         <AddIcon />
       </Fab>
 
       {/* Side Drawer */}
       <SideDrawer open={showDrawer} onClose={() => setShowDrawer(false)} />
+
+      {/* Create Ledger Dialog */}
+      <LedgerCreateDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSuccess={handleCreateSuccess}
+      />
     </Box>
   );
 }
