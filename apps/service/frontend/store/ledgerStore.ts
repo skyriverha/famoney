@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createLedgerApi, ApiError } from '@/lib/api';
-import type { LedgerResponse, CreateLedgerRequest, UpdateLedgerRequest, MemberResponse } from '@/lib/api';
+import type { LedgerResponse, CreateLedgerRequest, UpdateLedgerRequest, MemberResponse, InviteMemberRequest, UpdateMemberRoleRequest } from '@/lib/api';
 import { useAuthStore } from './authStore';
 
 interface LedgerState {
@@ -17,6 +17,9 @@ interface LedgerState {
   updateLedger: (ledgerId: string, request: UpdateLedgerRequest) => Promise<LedgerResponse>;
   deleteLedger: (ledgerId: string) => Promise<void>;
   fetchMembers: (ledgerId: string) => Promise<void>;
+  inviteMember: (ledgerId: string, request: InviteMemberRequest) => Promise<MemberResponse>;
+  updateMemberRole: (ledgerId: string, memberId: string, request: UpdateMemberRoleRequest) => Promise<MemberResponse>;
+  removeMember: (ledgerId: string, memberId: string) => Promise<void>;
   clearError: () => void;
   reset: () => void;
 }
@@ -120,6 +123,56 @@ export const useLedgerStore = create<LedgerState>()((set, get) => ({
       const ledgerApi = createLedgerApi(getAccessToken());
       const members = await ledgerApi.getMembers(ledgerId);
       set({ members, isLoading: false });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      set({ error: message, isLoading: false });
+      throw new Error(message);
+    }
+  },
+
+  inviteMember: async (ledgerId: string, request: InviteMemberRequest) => {
+    set({ isLoading: true, error: null });
+    try {
+      const ledgerApi = createLedgerApi(getAccessToken());
+      const newMember = await ledgerApi.inviteMember(ledgerId, request);
+      const { members } = get();
+      set({ members: [...members, newMember], isLoading: false });
+      return newMember;
+    } catch (error) {
+      const message = getErrorMessage(error);
+      set({ error: message, isLoading: false });
+      throw new Error(message);
+    }
+  },
+
+  updateMemberRole: async (ledgerId: string, memberId: string, request: UpdateMemberRoleRequest) => {
+    set({ isLoading: true, error: null });
+    try {
+      const ledgerApi = createLedgerApi(getAccessToken());
+      const updatedMember = await ledgerApi.updateMemberRole(ledgerId, memberId, request);
+      const { members } = get();
+      set({
+        members: members.map((m) => (m.id === memberId ? updatedMember : m)),
+        isLoading: false,
+      });
+      return updatedMember;
+    } catch (error) {
+      const message = getErrorMessage(error);
+      set({ error: message, isLoading: false });
+      throw new Error(message);
+    }
+  },
+
+  removeMember: async (ledgerId: string, memberId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const ledgerApi = createLedgerApi(getAccessToken());
+      await ledgerApi.removeMember(ledgerId, memberId);
+      const { members } = get();
+      set({
+        members: members.filter((m) => m.id !== memberId),
+        isLoading: false,
+      });
     } catch (error) {
       const message = getErrorMessage(error);
       set({ error: message, isLoading: false });

@@ -16,6 +16,16 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
+export interface UpdateUserRequest {
+  name?: string;
+  profileImage?: string | null;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface UserResponse {
   id: string;
   email: string;
@@ -251,6 +261,82 @@ export class ApiError extends Error {
  */
 export function createAuthApi(accessToken?: string | null): AuthApi {
   return new AuthApi(accessToken || undefined);
+}
+
+/**
+ * API client for user profile endpoints.
+ */
+export class UserApi {
+  private baseUrl: string;
+  private accessToken: string;
+
+  constructor(accessToken: string) {
+    this.baseUrl = API_BASE_URL;
+    this.accessToken = accessToken;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${this.accessToken}`,
+      ...options.headers,
+    };
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: 'Network error',
+        status: response.status,
+      }));
+      throw new ApiError(error.message || 'Request failed', response.status);
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return response.json();
+  }
+
+  async getProfile(): Promise<UserResponse> {
+    return this.request<UserResponse>('/api/v1/users/me', {
+      method: 'GET',
+    });
+  }
+
+  async updateProfile(request: UpdateUserRequest): Promise<UserResponse> {
+    return this.request<UserResponse>('/api/v1/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async changePassword(request: ChangePasswordRequest): Promise<void> {
+    return this.request<void>('/api/v1/users/me/password', {
+      method: 'PATCH',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    return this.request<void>('/api/v1/users/me', {
+      method: 'DELETE',
+    });
+  }
+}
+
+/**
+ * Create User API client.
+ */
+export function createUserApi(accessToken: string): UserApi {
+  return new UserApi(accessToken);
 }
 
 /**

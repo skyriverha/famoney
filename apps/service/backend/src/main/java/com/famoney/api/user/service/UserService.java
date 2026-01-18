@@ -1,12 +1,14 @@
 package com.famoney.api.user.service;
 
 import com.famoney.api.common.exception.ResourceNotFoundException;
+import com.famoney.api.user.dto.ChangePasswordRequest;
 import com.famoney.api.user.dto.UpdateUserRequest;
 import com.famoney.api.user.dto.UserResponse;
 import com.famoney.api.user.entity.User;
 import com.famoney.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Get user by ID.
@@ -72,6 +75,29 @@ public class UserService {
         user.softDelete();
         userRepository.save(user);
         log.info("Soft deleted user: {}", user.getEmail());
+    }
+
+    /**
+     * Change user password.
+     *
+     * @param userId  User ID
+     * @param request Change password request with current and new password
+     * @throws ResourceNotFoundException if user not found
+     * @throws IllegalArgumentException  if current password is incorrect
+     */
+    @Transactional
+    public void changePassword(String userId, ChangePasswordRequest request) {
+        User user = findUserById(userId);
+
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("Changed password for user: {}", user.getEmail());
     }
 
     /**

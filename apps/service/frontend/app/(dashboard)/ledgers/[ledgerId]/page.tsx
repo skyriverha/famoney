@@ -27,6 +27,7 @@ import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import TopAppBar from '@/components/layout/TopAppBar';
 import ExpenseCreateDialog from '@/components/expense/ExpenseCreateDialog';
+import ExpenseEditDialog from '@/components/expense/ExpenseEditDialog';
 import ExpenseFilterDialog from '@/components/expense/ExpenseFilterDialog';
 import { useAuthStore } from '@/store/authStore';
 import { useLedgerStore } from '@/store/ledgerStore';
@@ -87,6 +88,7 @@ export default function LedgerDetailPage() {
   } = useExpenseStore();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseResponse | null>(null);
@@ -119,7 +121,11 @@ export default function LedgerDetailPage() {
 
   const handleMenuClose = () => {
     setMenuAnchor(null);
-    setSelectedExpense(null);
+  };
+
+  const handleEditExpense = () => {
+    setMenuAnchor(null);
+    setShowEditDialog(true);
   };
 
   const handleDeleteExpense = async () => {
@@ -377,7 +383,7 @@ export default function LedgerDetailPage() {
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMenuClose}>수정</MenuItem>
+        <MenuItem onClick={handleEditExpense}>수정</MenuItem>
         <MenuItem onClick={handleDeleteExpense} sx={{ color: 'error.main' }}>
           삭제
         </MenuItem>
@@ -391,6 +397,23 @@ export default function LedgerDetailPage() {
         categories={categories}
         onSuccess={() => {
           setShowCreateDialog(false);
+          fetchExpenses(ledgerId, { page: 0 });
+        }}
+      />
+
+      {/* Edit Expense Dialog */}
+      <ExpenseEditDialog
+        open={showEditDialog}
+        onClose={() => {
+          setShowEditDialog(false);
+          setSelectedExpense(null);
+        }}
+        ledgerId={ledgerId}
+        expense={selectedExpense}
+        categories={categories}
+        onSuccess={() => {
+          setShowEditDialog(false);
+          setSelectedExpense(null);
           fetchExpenses(ledgerId, { page: 0 });
         }}
       />

@@ -166,6 +166,31 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/users/me/password:
+    patch:
+      tags: [Users]
+      summary: 비밀번호 변경
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: 비밀번호 변경 성공
+        '400':
+          description: 현재 비밀번호가 일치하지 않거나 유효하지 않은 새 비밀번호
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # ============================================
   # Ledgers
   # ============================================
@@ -874,6 +899,23 @@ components:
         profileImage:
           type: string
           nullable: true
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          description: 현재 비밀번호
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+          description: 새 비밀번호 (최소 8자)
 
     # ------------------------------------------
     # Ledger

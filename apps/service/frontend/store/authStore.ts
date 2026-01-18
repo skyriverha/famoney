@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createAuthApi, ApiError } from '@/lib/api';
-import type { AuthResponse, UserResponse } from '@/lib/api';
+import { createAuthApi, createUserApi, ApiError } from '@/lib/api';
+import type { AuthResponse, UserResponse, UpdateUserRequest, ChangePasswordRequest } from '@/lib/api';
 
 interface AuthState {
   user: UserResponse | null;
@@ -16,6 +16,9 @@ interface AuthState {
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
+  updateProfile: (request: UpdateUserRequest) => Promise<void>;
+  changePassword: (request: ChangePasswordRequest) => Promise<void>;
+  deleteAccount: () => Promise<void>;
   clearError: () => void;
 
   // Getters
@@ -102,6 +105,62 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearError: () => set({ error: null }),
+
+      updateProfile: async (request: UpdateUserRequest) => {
+        const { accessToken } = get();
+        if (!accessToken) throw new Error('인증이 필요합니다.');
+
+        set({ isLoading: true, error: null });
+        try {
+          const userApi = createUserApi(accessToken);
+          const updatedUser = await userApi.updateProfile(request);
+          set({ user: updatedUser, isLoading: false });
+        } catch (error) {
+          const message = getErrorMessage(error);
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      changePassword: async (request: ChangePasswordRequest) => {
+        const { accessToken } = get();
+        if (!accessToken) throw new Error('인증이 필요합니다.');
+
+        set({ isLoading: true, error: null });
+        try {
+          const userApi = createUserApi(accessToken);
+          await userApi.changePassword(request);
+          set({ isLoading: false });
+        } catch (error) {
+          const message = getErrorMessage(error);
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      deleteAccount: async () => {
+        const { accessToken } = get();
+        if (!accessToken) throw new Error('인증이 필요합니다.');
+
+        set({ isLoading: true, error: null });
+        try {
+          const userApi = createUserApi(accessToken);
+          await userApi.deleteAccount();
+          // Clear all auth state after account deletion
+          set({
+            user: null,
+            accessToken: null,
+            refreshToken: null,
+            expiresAt: null,
+            isLoading: false,
+            error: null,
+          });
+        } catch (error) {
+          const message = getErrorMessage(error);
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
 
       isAuthenticated: () => {
         const { user, accessToken } = get();
