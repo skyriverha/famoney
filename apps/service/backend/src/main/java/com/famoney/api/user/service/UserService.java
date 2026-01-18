@@ -1,5 +1,6 @@
 package com.famoney.api.user.service;
 
+import com.famoney.api.common.exception.BadRequestException;
 import com.famoney.api.common.exception.ResourceNotFoundException;
 import com.famoney.api.user.dto.ChangePasswordRequest;
 import com.famoney.api.user.dto.UpdateUserRequest;
@@ -83,7 +84,7 @@ public class UserService {
      * @param userId  User ID
      * @param request Change password request with current and new password
      * @throws ResourceNotFoundException if user not found
-     * @throws IllegalArgumentException  if current password is incorrect
+     * @throws BadRequestException       if current password is incorrect
      */
     @Transactional
     public void changePassword(String userId, ChangePasswordRequest request) {
@@ -91,7 +92,7 @@ public class UserService {
 
         // Verify current password
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+            throw new BadRequestException("현재 비밀번호가 일치하지 않습니다.");
         }
 
         // Update password

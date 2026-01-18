@@ -1,5 +1,65 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+/**
+ * Custom API error class.
+ */
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/**
+ * Base API client with common request logic.
+ */
+abstract class BaseApi {
+  protected baseUrl: string;
+  protected accessToken?: string;
+
+  constructor(accessToken?: string) {
+    this.baseUrl = API_BASE_URL;
+    this.accessToken = accessToken;
+  }
+
+  protected async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: 'Network error',
+        status: response.status,
+      }));
+      throw new ApiError(error.message || 'Request failed', response.status);
+    }
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    return response.json();
+  }
+}
+
 // Types matching the backend API
 export interface SignupRequest {
   email: string;
@@ -172,47 +232,9 @@ export interface ExpenseFilters {
 /**
  * API client for authentication endpoints.
  */
-export class AuthApi {
-  private baseUrl: string;
-  private accessToken?: string;
-
+export class AuthApi extends BaseApi {
   constructor(accessToken?: string) {
-    this.baseUrl = API_BASE_URL;
-    this.accessToken = accessToken;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    };
-
-    if (this.accessToken) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
-    }
-
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'Network error',
-        status: response.status,
-      }));
-      throw new ApiError(error.message || 'Request failed', response.status);
-    }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+    super(accessToken);
   }
 
   async signup(request: SignupRequest): Promise<AuthResponse> {
@@ -244,19 +266,6 @@ export class AuthApi {
 }
 
 /**
- * Custom API error class.
- */
-export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
-}
-
-/**
  * Create Auth API client.
  */
 export function createAuthApi(accessToken?: string | null): AuthApi {
@@ -266,43 +275,9 @@ export function createAuthApi(accessToken?: string | null): AuthApi {
 /**
  * API client for user profile endpoints.
  */
-export class UserApi {
-  private baseUrl: string;
-  private accessToken: string;
-
+export class UserApi extends BaseApi {
   constructor(accessToken: string) {
-    this.baseUrl = API_BASE_URL;
-    this.accessToken = accessToken;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.accessToken}`,
-      ...options.headers,
-    };
-
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'Network error',
-        status: response.status,
-      }));
-      throw new ApiError(error.message || 'Request failed', response.status);
-    }
-
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+    super(accessToken);
   }
 
   async getProfile(): Promise<UserResponse> {
@@ -342,43 +317,9 @@ export function createUserApi(accessToken: string): UserApi {
 /**
  * API client for ledger endpoints.
  */
-export class LedgerApi {
-  private baseUrl: string;
-  private accessToken: string;
-
+export class LedgerApi extends BaseApi {
   constructor(accessToken: string) {
-    this.baseUrl = API_BASE_URL;
-    this.accessToken = accessToken;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.accessToken}`,
-      ...options.headers,
-    };
-
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'Network error',
-        status: response.status,
-      }));
-      throw new ApiError(error.message || 'Request failed', response.status);
-    }
-
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+    super(accessToken);
   }
 
   async createLedger(request: CreateLedgerRequest): Promise<LedgerResponse> {
@@ -451,43 +392,9 @@ export function createLedgerApi(accessToken: string): LedgerApi {
 /**
  * API client for expense and category endpoints.
  */
-export class ExpenseApi {
-  private baseUrl: string;
-  private accessToken: string;
-
+export class ExpenseApi extends BaseApi {
   constructor(accessToken: string) {
-    this.baseUrl = API_BASE_URL;
-    this.accessToken = accessToken;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.accessToken}`,
-      ...options.headers,
-    };
-
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: 'Network error',
-        status: response.status,
-      }));
-      throw new ApiError(error.message || 'Request failed', response.status);
-    }
-
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+    super(accessToken);
   }
 
   // Category endpoints

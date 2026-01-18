@@ -40,12 +40,8 @@ import BottomNavigation from '@/components/layout/BottomNavigation';
 import { useAuthStore } from '@/store/authStore';
 import { useLedgerStore } from '@/store/ledgerStore';
 import { useExpenseStore } from '@/store/expenseStore';
+import { CHART_COLORS, PAGINATION } from '@/lib/constants';
 import type { ExpenseResponse, CategoryResponse } from '@/lib/api';
-
-const CHART_COLORS = [
-  '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-];
 
 function formatCurrency(amount: number, currency: string = 'KRW'): string {
   return new Intl.NumberFormat('ko-KR', {
@@ -125,7 +121,7 @@ export default function StatisticsPage() {
     try {
       // Fetch all expenses for statistics (large page size)
       await Promise.all([
-        fetchExpenses(selectedLedgerId, { size: 1000 }),
+        fetchExpenses(selectedLedgerId, { size: PAGINATION.STATISTICS_PAGE_SIZE }),
         fetchCategories(selectedLedgerId),
       ]);
     } catch {

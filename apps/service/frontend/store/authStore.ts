@@ -43,7 +43,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.login({ email, password });
           setAuthState(set, response);
         } catch (error) {
-          const message = getErrorMessage(error);
+          const message = getErrorMessage(error, 'login');
           set({ error: message, isLoading: false });
           throw new Error(message);
         }
@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await authApi.signup({ email, password, name });
           setAuthState(set, response);
         } catch (error) {
-          const message = getErrorMessage(error);
+          const message = getErrorMessage(error, 'signup');
           set({ error: message, isLoading: false });
           throw new Error(message);
         }
@@ -132,7 +132,7 @@ export const useAuthStore = create<AuthState>()(
           await userApi.changePassword(request);
           set({ isLoading: false });
         } catch (error) {
-          const message = getErrorMessage(error);
+          const message = getErrorMessage(error, 'password');
           set({ error: message, isLoading: false });
           throw new Error(message);
         }
@@ -204,13 +204,23 @@ function setAuthState(
   });
 }
 
+type ErrorContext = 'login' | 'signup' | 'password' | 'default';
+
 /**
- * Extract error message from API error.
+ * Extract error message from API error with context-specific messages.
  */
-function getErrorMessage(error: unknown): string {
+function getErrorMessage(error: unknown, context: ErrorContext = 'default'): string {
   if (error instanceof ApiError) {
+    // Use server message if available for 400 errors
+    if (error.status === 400 && error.message) {
+      return error.message;
+    }
+
     switch (error.status) {
       case 401:
+        if (context === 'password') {
+          return '현재 비밀번호가 올바르지 않습니다.';
+        }
         return '이메일 또는 비밀번호가 올바르지 않습니다.';
       case 409:
         return '이미 가입된 이메일입니다.';

@@ -20,6 +20,7 @@ import {
   Stack,
 } from '@mui/material';
 import { useExpenseStore } from '@/store/expenseStore';
+import { PAYMENT_METHODS } from '@/lib/constants';
 import type { CategoryResponse } from '@/lib/api';
 
 interface ExpenseCreateDialogProps {
@@ -29,13 +30,6 @@ interface ExpenseCreateDialogProps {
   categories: CategoryResponse[];
   onSuccess: () => void;
 }
-
-const PAYMENT_METHODS = [
-  { value: 'card', label: '카드' },
-  { value: 'cash', label: '현금' },
-  { value: 'bank', label: '계좌이체' },
-  { value: 'other', label: '기타' },
-];
 
 export default function ExpenseCreateDialog({
   open,
